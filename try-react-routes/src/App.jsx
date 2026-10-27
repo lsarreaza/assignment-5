@@ -1,19 +1,79 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
+import SearchForm from './SearchForm.jsx'
+import ShowList from './ShowList.jsx'
 
 function App() {
-  const [query, setQuery] = useState('')
+  const defaultQuery = 'fullmetal alchemist'
+  const [query, setQuery] = useState(defaultQuery)
+  const [submittedQuery, setSubmittedQuery] = useState(defaultQuery)
+  const [results, setResults] = useState([])
+  const [requestStatus, setRequestStatus] = useState('loading')
+  const [errorMessage, setErrorMessage] = useState('')
+
+  useEffect(() => {
+    if (!submittedQuery) {
+      setResults([])
+      setErrorMessage('')
+      setRequestStatus('empty')
+      return
+    }
+
+    const controller = new AbortController()
+
+    async function fetchShows() {
+      setRequestStatus('loading')
+      setErrorMessage('')
+
+      try {
+        const response = await fetch(
+          `https://api.tvmaze.com/search/shows?q=${encodeURIComponent(submittedQuery)}`,
+          { signal: controller.signal },
+        )
+
+        if (!response.ok) {
+          throw new Error(
+            response.status === 429
+              ? 'Too many requests. Please try again later.'
+              : 'Unable to load shows.',
+          )
+        }
+
+        const data = await response.json()
+        setResults(data.slice(0, 10))
+        setRequestStatus(data.length ? 'results' : 'no-results')
+      } catch (error) {
+        if (error.name === 'AbortError') return
+        setResults([])
+        setErrorMessage(error.message)
+        setRequestStatus('error')
+      }
+    }
+
+    fetchShows()
+
+    return () => controller.abort()
+  }, [submittedQuery])
+
+  function handleSearch(searchTerm) {
+    setSubmittedQuery(searchTerm)
+  }
 
   return (
     <main>
       <h1>TV Show Search</h1>
-      <label htmlFor="search-input">Search for a show</label>
-      <input
-        id="search-input"
-        type="search"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
+      <SearchForm
+        query={query}
+        setQuery={setQuery}
+        onSearch={handleSearch}
       />
+      <p>Current search: {submittedQuery || 'None'}</p>
+      <p>Results: {results.length}</p>
+      {requestStatus === 'loading' && <p>Loading shows...</p>}
+      {requestStatus === 'empty' && <p>Please enter a show title or keyword.</p>}
+      {requestStatus === 'error' && <p>{errorMessage}</p>}
+      {requestStatus === 'no-results' && <p>No shows found.</p>}
+      {requestStatus === 'results' && <ShowList shows={results} />}
     </main>
   )
 }
