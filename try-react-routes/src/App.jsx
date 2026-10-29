@@ -4,7 +4,7 @@ import SearchForm from './SearchForm.jsx'
 import ShowList from './ShowList.jsx'
 
 function App() {
-  const defaultQuery = 'fullmetal alchemist'
+  const defaultQuery = 'batman'
   const [query, setQuery] = useState(defaultQuery)
   const [submittedQuery, setSubmittedQuery] = useState(defaultQuery)
   const [results, setResults] = useState([])
