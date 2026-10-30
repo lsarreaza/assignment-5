@@ -1,6 +1,7 @@
 export function stripHtml(value) {
   if (!value) return 'Not available'
-  return value.replace(/<[^>]*>/g, '').trim()
+  const text = value.replace(/<[^>]*>/g, '').trim()
+  return text || 'Not available'
 }
 
 export function formatDate(value) {
@@ -11,5 +12,7 @@ export function formatDate(value) {
 }
 
 export function showValue(value) {
-  return value ?? 'Not available'
+  if (value === null || value === undefined) return 'Not available'
+  if (typeof value === 'string' && !value.trim()) return 'Not available'
+  return value
 }

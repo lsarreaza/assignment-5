@@ -1,36 +1,37 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { formatDate, showValue, stripHtml } from './utils.js'
 
 function ShowCard({ show }) {
   const [cast, setCast] = useState([])
   const [castStatus, setCastStatus] = useState('loading')
+  const [castError, setCastError] = useState('')
 
   useEffect(() => {
-    const controller = new AbortController()
-
     async function fetchCast() {
       try {
         const response = await fetch(
           `https://api.tvmaze.com/shows/${show.id}/cast`,
-          { signal: controller.signal },
         )
 
         if (!response.ok) {
-          throw new Error('Cast unavailable')
+          throw new Error(
+            response.status === 429
+              ? 'Too many requests. Please try again later.'
+              : 'Cast unavailable',
+          )
         }
 
         const data = await response.json()
         setCast(data.slice(0, 5))
         setCastStatus('ready')
       } catch (error) {
-        if (error.name === 'AbortError') return
+        setCastError(error.message)
         setCastStatus('error')
       }
     }
 
     fetchCast()
-
-    return () => controller.abort()
   }, [show.id])
 
   return (
@@ -41,7 +42,9 @@ function ShowCard({ show }) {
         <div className="image-fallback">No poster</div>
       )}
       <div className="show-card-content">
-        <h2>{showValue(show.name)}</h2>
+        <h2>
+          <Link to={`/shows/${show.id}`}>{showValue(show.name)}</Link>
+        </h2>
         <p>{showValue(stripHtml(show.summary))}</p>
         <dl>
           <dt>Premiered</dt>
@@ -55,13 +58,13 @@ function ShowCard({ show }) {
         </dl>
         <h3>Cast</h3>
         {castStatus === 'loading' && <p>Loading cast...</p>}
-        {castStatus === 'error' && <p>Cast not available.</p>}
+        {castStatus === 'error' && <p>{castError}</p>}
         {castStatus === 'ready' && (
           <ul>
             {cast.length ? (
               cast.map(({ person, character }) => (
                 <li key={person.id}>
-                  {person.name} as {character.name}
+                  {showValue(person.name)} as {showValue(character.name)}
                 </li>
               ))
             ) : (
